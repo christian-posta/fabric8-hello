@@ -12,12 +12,13 @@ public class MyRoute extends RouteBuilder {
     @Override
     public void configure() throws Exception {
         // try to call the service again
-        onException(Exception.class)
-                .maximumRedeliveries(10)
-                .redeliveryDelay(1000);
+        // comment this out because we'll use envoy for this
+//        onException(Exception.class)
+//                .maximumRedeliveries(10)
+//                .redeliveryDelay(1000);
 
-        from("timer:foo?period=2000")
-                .to("netty4-http:http://{{service:helloswarm}}/say?keepAlive=false&disconnect=true")
+        from("timer:foo?period=10000")
+                .to("http4://localhost:9000/say")
                 .log("${body}");
     }
 }

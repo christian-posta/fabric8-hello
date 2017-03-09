@@ -1,0 +1,101 @@
+---
+apiVersion: v1
+kind: DeploymentConfig
+metadata:
+  annotations:
+    fabric8.io/git-commit: 71401e726363946c7013158bb13ee0f1982e3662
+    fabric8.io/git-branch: master
+    fabric8.io/metrics-path: dashboard/file/camel-routes.json/?var-project=client&var-version=1.0-SNAPSHOT
+    fabric8.io/scm-tag: HEAD
+    fabric8.io/scm-url: https://github.com/spring-projects/spring-boot/spring-boot-starter-parent/client
+  labels:
+    provider: fabric8
+    project: client
+    version: 1.0-SNAPSHOT
+    group: com.foo
+  name: client
+spec:
+  replicas: 1
+  selector:
+    project: client
+    provider: fabric8
+    version: 1.0-SNAPSHOT
+    group: com.foo
+  template:
+    metadata:
+      annotations:
+        fabric8.io/git-commit: 71401e726363946c7013158bb13ee0f1982e3662
+        fabric8.io/git-branch: master
+        fabric8.io/metrics-path: dashboard/file/camel-routes.json/?var-project=client&var-version=1.0-SNAPSHOT
+        fabric8.io/scm-tag: HEAD
+        fabric8.io/scm-url: https://github.com/spring-projects/spring-boot/spring-boot-starter-parent/client
+      labels:
+        provider: fabric8
+        project: client
+        version: 1.0-SNAPSHOT
+        group: com.foo
+    spec:
+      volumes:
+        - name: camel-config
+          configMap:
+            name: camel-envoy
+      containers:
+      - env:
+        - name: KUBERNETES_NAMESPACE
+          valueFrom:
+            fieldRef:
+              fieldPath: metadata.namespace
+        image: kameshsampath/envoy:latest
+        imagePullPolicy: IfNotPresent
+        name: envoy
+        ports:
+        - containerPort: 9000
+          name: envoy-proxy
+          protocol: TCP
+        volumeMounts:
+          - name: camel-config
+            mountPath: /etc/envoy
+      - env:
+        - name: KUBERNETES_NAMESPACE
+          valueFrom:
+            fieldRef:
+              fieldPath: metadata.namespace
+        - name: JAVA_APP_DIR
+          value: /deployments
+        image: client:latest
+        imagePullPolicy: IfNotPresent
+        livenessProbe:
+          httpGet:
+            path: /health
+            port: 8080
+            scheme: HTTP
+          initialDelaySeconds: 180
+        name: spring-boot
+        ports:
+        - containerPort: 8080
+          name: http
+          protocol: TCP
+        - containerPort: 9779
+          name: prometheus
+          protocol: TCP
+        - containerPort: 8778
+          name: jolokia
+          protocol: TCP
+        readinessProbe:
+          httpGet:
+            path: /health
+            port: 8080
+            scheme: HTTP
+          initialDelaySeconds: 10
+        securityContext:
+          privileged: false
+  triggers:
+  - type: ConfigChange
+  - imageChangeParams:
+      automatic: true
+      containerNames:
+      - spring-boot
+      from:
+        kind: ImageStreamTag
+        name: client:latest
+    type: ImageChange
